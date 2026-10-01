@@ -1,4 +1,4 @@
-# golang-worker-template
+# fast-sockets
 
 > GitHub template for Go Worker Service projects (Kafka consumers, background workers, etc.).
 
