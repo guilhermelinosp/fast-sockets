@@ -80,7 +80,7 @@ require (
 
 require (
 	github.com/gorilla/websocket v1.5.3
-	github.com/guilhermelinosp/fast-platform v1.10.7
+	github.com/guilhermelinosp/fast-platform v1.11.0
 	github.com/guilhermelinosp/hellnet-lib-kafka v1.11.1
 	github.com/guilhermelinosp/hellnet-lib-telemetry v1.14.2
 	github.com/zishang520/socket.io/servers/socket/v3 v3.0.6
