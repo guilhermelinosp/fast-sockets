@@ -50,7 +50,8 @@ cd cmd/sockets && go run . client
 
 ```text
 cmd/sockets           servidor Socket.IO e client de teste
-internal/sockets       servidor Socket.IO e consumers Kafka
+internal/consumers     consumidores Kafka (pedido solicitado e aceito)
+internal/sockets       servidor Socket.IO (namespaces e salas)
 
 importa github.com/guilhermelinosp/fast-platform/{platform,env,events}  (runtime, variáveis de ambiente e eventos de pedido)
 ```
