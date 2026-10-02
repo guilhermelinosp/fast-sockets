@@ -1,6 +1,6 @@
 # fast-sockets
 
-Serviço **sockets** da plataforma de corridas [fast-platform](https://github.com/guilhermelinosp/fast-platform): consome os eventos do Kafka e os entrega em tempo real por Socket.IO aos apps de motoristas e passageiros. O repositório é autocontido: inclui o runtime e os eventos que usa, copiados do [fast-platform](https://github.com/guilhermelinosp/fast-platform).
+Serviço **sockets** da plataforma de corridas [fast-platform](https://github.com/guilhermelinosp/fast-platform): consome os eventos do Kafka e os entrega em tempo real por Socket.IO aos apps de motoristas e passageiros. O runtime e os eventos de pedido vêm da biblioteca [fast-platform](https://github.com/guilhermelinosp/fast-platform) (`platform`, `env` e `events`).
 
 [![pipeline](https://github.com/guilhermelinosp/fast-sockets/actions/workflows/pipeline.yml/badge.svg)](https://github.com/guilhermelinosp/fast-sockets/actions/workflows/pipeline.yml)
 [![pr-check](https://github.com/guilhermelinosp/fast-sockets/actions/workflows/pr-check.yml/badge.svg)](https://github.com/guilhermelinosp/fast-sockets/actions/workflows/pr-check.yml)
@@ -51,9 +51,8 @@ cd cmd/sockets && go run . client
 ```text
 cmd/sockets           servidor Socket.IO e client de teste
 internal/sockets       servidor Socket.IO e consumers Kafka
-internal/platform      runtime compartilhado: bootstrap, erros, middleware e propagação de trace (cópia do fast-platform)
-internal/env           leitura de variáveis de ambiente (cópia do fast-platform)
-internal/orders        eventos de pedido publicados no Kafka (cópia do fast-platform)
+
+importa github.com/guilhermelinosp/fast-platform/{platform,env,events}  (runtime, variáveis de ambiente e eventos de pedido)
 ```
 
 ## Desenvolvimento
