@@ -1,4 +1,4 @@
-package sockets
+package consumers
 
 import (
 	"context"

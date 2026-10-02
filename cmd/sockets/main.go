@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/guilhermelinosp/fast-platform/platform"
+	"github.com/guilhermelinosp/fast-sockets/internal/consumers"
 	"github.com/guilhermelinosp/fast-sockets/internal/sockets"
 	"github.com/guilhermelinosp/hellnet-lib-telemetry/telemetry"
 )
@@ -41,12 +42,12 @@ func run() error {
 	defer func() { _ = ops.Close(ctx) }()
 
 	socket := sockets.NewServer(ops)
-	orderRequestConsumer, err := sockets.NewOrderRequestConsumer(ctx, ops, socket)
+	orderRequestConsumer, err := consumers.NewOrderRequestConsumer(ctx, ops, socket)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = orderRequestConsumer.Close() }()
-	orderAcceptedConsumer, err := sockets.NewOrderAcceptedConsumer(ctx, ops, socket)
+	orderAcceptedConsumer, err := consumers.NewOrderAcceptedConsumer(ctx, ops, socket)
 	if err != nil {
 		return err
 	}
