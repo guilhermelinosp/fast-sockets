@@ -1,8 +1,6 @@
 # fast-sockets
 
-Serviço **sockets** da plataforma de corridas [fast-platform](https://github.com/guilhermelinosp/fast-platform): consome os eventos do Kafka e os entrega em tempo real por Socket.IO aos apps de motoristas e passageiros.
-
-> **Estado atual:** este repositório foi criado a partir do [hellnet-worker-template](https://github.com/guilhermelinosp/hellnet-worker-template) e contém o esqueleto do worker. A implementação em uso está em `cmd/sockets` do fast-platform.
+Serviço **sockets** da plataforma de corridas [fast-platform](https://github.com/guilhermelinosp/fast-platform): consome os eventos do Kafka e os entrega em tempo real por Socket.IO aos apps de motoristas e passageiros. O repositório é autocontido: inclui o runtime e os eventos que usa, copiados do [fast-platform](https://github.com/guilhermelinosp/fast-platform).
 
 [![pipeline](https://github.com/guilhermelinosp/fast-sockets/actions/workflows/pipeline.yml/badge.svg)](https://github.com/guilhermelinosp/fast-sockets/actions/workflows/pipeline.yml)
 [![pr-check](https://github.com/guilhermelinosp/fast-sockets/actions/workflows/pr-check.yml/badge.svg)](https://github.com/guilhermelinosp/fast-sockets/actions/workflows/pr-check.yml)
@@ -10,37 +8,53 @@ Serviço **sockets** da plataforma de corridas [fast-platform](https://github.co
 
 ## Início rápido
 
-```bash
-go run ./cmd/sockets
-```
+O serviço lê o `.env` da própria pasta (`cmd/sockets/.env`, ignorado pelo git): copie o `cmd/sockets/.env.example` e ajuste. É necessário o Kafka.
 
-Sem `HELLNET_TELEMETRY_ENDPOINT`, o worker roda e imprime um `tick` a cada 5 s.
+```bash
+cp cmd/sockets/.env.example cmd/sockets/.env
+cd cmd/sockets && go run -race main.go
+```
 
 ## Configuração
 
-| Variável | Descrição | Padrão |
-|---|---|---|
-| `HELLNET_TELEMETRY_ENDPOINT` | URL do collector OTLP/HTTP (sem ela, a telemetria não exporta) | *vazio* |
-| `HELLNET_TELEMETRY_SERVICE` | nome do serviço reportado pela telemetria | nome do módulo |
+| Variável | Descrição |
+|---|---|
+| `HELLNET_SERVICE`, `HELLNET_ENVIRONMENT` | Nome do serviço e ambiente |
+| `HELLNET_PORT` | Porta HTTP do servidor Socket.IO |
+| `HELLNET_TELEMETRY_ENDPOINT` | Endpoint OTLP/HTTP (Alloy) |
+| `KAFKA_BROKERS`, `KAFKA_SECURITY_PROTOCOL` | Conexão Kafka |
+| `KAFKA_TOPIC_ORDER_REQUESTED`, `KAFKA_TOPIC_ORDER_ACCEPTED` | Tópicos dos eventos |
+| `SOCKET_DRIVERS_NAMESPACE`, `SOCKET_RIDERS_NAMESPACE` | Namespaces Socket.IO (motoristas e passageiros) |
+| `SOCKET_URL` | Só para o client de teste (`go run . client`) |
 
-Um `.env` ao lado do binário é carregado quando existe (`internal/env`); variáveis já definidas no ambiente têm prioridade.
-
-A implementação do fast-platform lê também `KAFKA_*`, `SOCKET_*` e `HELLNET_PORT`: veja a tabela de configuração do fast-platform.
+Variáveis já definidas no ambiente têm prioridade sobre o `.env`. Faltando uma variável obrigatória, o processo falha com um erro claro.
 
 ## Arquitetura
 
 ```text
-Kafka ──► fast-sockets ──► Socket.IO /drivers (motoristas)  e  /riders (passageiros, sala order:<orderId>)
+Kafka ──► fast-sockets ──► Socket.IO /drivers (apps dos motoristas)
+                      └──► Socket.IO /riders  (apps dos passageiros, sala order:<orderId>)
 ```
 
-Na plataforma, cada evento é emitido com o nome do tópico Kafka: `KAFKA_TOPIC_ORDER_REQUESTED` para os motoristas e `KAFKA_TOPIC_ORDER_ACCEPTED` para os passageiros (que entram na sala `order:<orderId>`).
+O servidor emite cada evento com o **nome do tópico** Kafka: `KAFKA_TOPIC_ORDER_REQUESTED` para os motoristas e `KAFKA_TOPIC_ORDER_ACCEPTED` para os passageiros. O passageiro entra na sala do próprio pedido com o evento `order.subscribe` (sala `order:<orderId>`) e recebe o aceite nela.
+
+## Client de teste
+
+`cmd/sockets/client.go` conecta como motorista e como passageiro, loga cada pacote (namespace, evento e ids) e inscreve o passageiro nos pedidos que o motorista recebe. Lê o mesmo `.env` do servidor:
+
+```bash
+cd cmd/sockets && go run . client
+```
+
+## Estrutura
 
 ```text
-cmd/sockets/main.go   telemetria -> contexto com sinais -> loop do worker -> encerramento gracioso
-internal/env         leitura opcional de .env e helpers de variáveis de ambiente
+cmd/sockets           servidor Socket.IO e client de teste
+internal/sockets       servidor Socket.IO e consumers Kafka
+internal/platform      runtime compartilhado: bootstrap, erros, middleware e propagação de trace (cópia do fast-platform)
+internal/env           leitura de variáveis de ambiente (cópia do fast-platform)
+internal/orders        eventos de pedido publicados no Kafka (cópia do fast-platform)
 ```
-
-O `main.go` inicia a telemetria (`telemetry.New`), roda o `workerLoop` em uma goroutine (um ticker de 5 s que chama o `runJob`, instrumentado como span de worker `tick`) e, em `SIGINT`/`SIGTERM`, cancela o contexto e espera até 10 s o loop parar. Hoje `doWork` só imprime o horário: o trabalho real (Kafka -> Socket.IO) é implementado em [fast-platform](https://github.com/guilhermelinosp/fast-platform) (`cmd/sockets`).
 
 ## Desenvolvimento
 

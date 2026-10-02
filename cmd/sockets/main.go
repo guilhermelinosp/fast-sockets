@@ -1,89 +1,71 @@
-// Package main provides the sockets entry point for fast-sockets.
-// Replace the work function with your actual background job logic
-// (e.g., Kafka consumer, SQS polling, scheduled tasks, etc.).
 package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"errors"
+	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
+	"github.com/guilhermelinosp/fast-sockets/internal/platform"
+	"github.com/guilhermelinosp/fast-sockets/internal/sockets"
 	"github.com/guilhermelinosp/hellnet-lib-telemetry/telemetry"
 )
 
-// tel holds the observability instance. It is nil when main is not executed
-// (e.g. during unit tests), in which case jobs run without instrumentation.
-var tel *telemetry.Telemetry
-
 func main() {
-	t, err := telemetry.New()
-	if err != nil {
-		log.Fatalf("failed to init telemetry: %v", err)
-	}
-	tel = t
-	defer func() { _ = tel.Shutdown() }()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		workerLoop(ctx)
-	}()
-
-	tel.Log().Info("worker started")
-
-	select {
-	case <-sig:
-		tel.Log().Info("shutdown signal received, stopping worker")
-		cancel()
-	case <-done:
-		tel.Log().Info("worker finished")
-	}
-
-	select {
-	case <-done:
-	case <-time.After(10 * time.Second):
-		tel.Log().Error("worker shutdown timed out")
-	}
-}
-
-func workerLoop(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			if tel != nil {
-				tel.Log().Info("worker loop exiting")
-			}
-			return
-		case t := <-ticker.C:
-			runJob(ctx, t)
-		}
-	}
-}
-
-// runJob executes one tick of work with observability (when tel is available).
-func runJob(ctx context.Context, t time.Time) {
-	do := func(c context.Context) error { return doWork(t) }
-	if tel != nil {
-		_ = tel.Worker("tick", do)
+	if len(os.Args) > 1 && os.Args[1] == "client" {
+		runClient()
 		return
 	}
-	_ = do(ctx)
+	if err := run(); err != nil {
+		platform.Fatal("fast-sockets", err)
+		os.Exit(1)
+	}
 }
 
-func doWork(t time.Time) error {
-	_, _ = fmt.Printf("tick at %s\n", t.Format(time.RFC3339))
+// run starts the Socket.IO gateway and its Kafka notification consumers.
+func run() error {
+	ctx, stop, err := platform.Context()
+	if err != nil {
+		return err
+	}
+	defer stop()
+
+	cfg, err := platform.NewConfig()
+	if err != nil {
+		return err
+	}
+	ops, err := telemetry.New(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = ops.Close(ctx) }()
+
+	socket := sockets.NewServer(ops)
+	orderRequestConsumer, err := sockets.NewOrderRequestConsumer(ctx, ops, socket)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = orderRequestConsumer.Close() }()
+	orderAcceptedConsumer, err := sockets.NewOrderAcceptedConsumer(ctx, ops, socket)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = orderAcceptedConsumer.Close() }()
+
+	go platform.Consume(ctx, ops, "order-requested", orderRequestConsumer.RunContext)
+	go platform.Consume(ctx, ops, "order-accepted", orderAcceptedConsumer.RunContext)
+
+	mux := http.NewServeMux()
+	mux.Handle("/socket.io/", socket.Handler())
+	mux.Handle("/live", ops.Live())
+	mux.Handle("/ready", ops.Ready())
+	mux.Handle("/health", ops.Health())
+
+	ops.Log(ctx).Info("fast-sockets started", "port", cfg.Port)
+	err = platform.Run(ctx, cfg, platform.NewServer(cfg, ops, mux))
+	if err != nil && !errors.Is(err, context.Canceled) {
+		ops.Log(ctx).Error("runtime error", "error", err)
+		return err
+	}
 	return nil
 }
