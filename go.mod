@@ -74,13 +74,13 @@ require (
 	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
-	google.golang.org/grpc v1.86.0-dev // indirect
+	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
 
 require (
 	github.com/gorilla/websocket v1.5.3
-	github.com/guilhermelinosp/fast-platform v1.11.0
+	github.com/guilhermelinosp/fast-platform v1.11.4
 	github.com/guilhermelinosp/hellnet-lib-kafka v1.11.1
 	github.com/guilhermelinosp/hellnet-lib-telemetry v1.14.2
 	github.com/zishang520/socket.io/servers/socket/v3 v3.0.6
