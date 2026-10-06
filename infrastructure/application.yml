@@ -32,7 +32,7 @@ spec:
           protocol: TCP
         envFrom:
         - configMapRef:
-            name: fast-sockets-config
+            name: fast-sockets
         env:
         - name: HELLNET_SERVICE
           value: fast-sockets
