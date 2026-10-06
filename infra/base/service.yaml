@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fast-sockets
+  labels:
+    app.kubernetes.io/name: hellnet-service
+    app.kubernetes.io/instance: fast-sockets
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: hellnet-service
+    app.kubernetes.io/instance: fast-sockets
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
