@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/guilhermelinosp/fast-platform/env"
-	"github.com/guilhermelinosp/fast-platform/events"
+	"github.com/guilhermelinosp/hellnet-lib-core/env"
+	"github.com/guilhermelinosp/hellnet-lib-core/events"
 	"github.com/guilhermelinosp/hellnet-lib-telemetry/telemetry"
 	"github.com/zishang520/socket.io/servers/socket/v3"
 	"go.opentelemetry.io/otel/attribute"
