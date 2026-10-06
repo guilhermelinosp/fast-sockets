@@ -1,19 +1,82 @@
-# Aplicar uma vez no cluster (kubectl apply -f). Depois o ArgoCD segue este repositorio.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: fast-sockets
-  namespace: argocd
+  labels: &id001
+    app.kubernetes.io/name: hellnet-service
+    app.kubernetes.io/instance: fast-sockets
 spec:
-  project: fast
-  source:
-    repoURL: https://github.com/guilhermelinosp/fast-sockets
-    targetRevision: main
-    path: infra
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: fast
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+  replicas: 1
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels: *id001
+  template:
+    metadata:
+      labels: *id001
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: fast-sockets
+        image: ghcr.io/guilhermelinosp/fast-sockets:v1.1.4
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: fast-sockets-config
+        env:
+        - name: HELLNET_SERVICE
+          value: fast-sockets
+        resources:
+          requests:
+            cpu: 20m
+            memory: 48Mi
+          limits:
+            cpu: '1'
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          periodSeconds: 10
+          failureThreshold: 6
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fast-sockets
+  labels:
+    app.kubernetes.io/name: hellnet-service
+    app.kubernetes.io/instance: fast-sockets
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: hellnet-service
+    app.kubernetes.io/instance: fast-sockets
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
