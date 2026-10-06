@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: fast-sockets-config
+  name: fast-sockets
   namespace: fast
 data:
   HELLNET_ENVIRONMENT: Development
