@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   name: fast-sockets
   labels: &id001
-    app.kubernetes.io/name: hellnet-service
     app.kubernetes.io/instance: fast-sockets
 spec:
   replicas: 1
@@ -68,12 +67,10 @@ kind: Service
 metadata:
   name: fast-sockets
   labels:
-    app.kubernetes.io/name: hellnet-service
     app.kubernetes.io/instance: fast-sockets
 spec:
   type: ClusterIP
   selector:
-    app.kubernetes.io/name: hellnet-service
     app.kubernetes.io/instance: fast-sockets
   ports:
   - name: http
