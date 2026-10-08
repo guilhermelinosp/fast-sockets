@@ -33,6 +33,8 @@ spec:
         envFrom:
         - configMapRef:
             name: fast-sockets
+        - secretRef:
+            name: fast-kafka-sockets
         env:
         - name: HELLNET_SERVICE
           value: fast-sockets
